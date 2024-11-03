@@ -67,7 +67,7 @@ provider "kubernetes" {
   config_path = local_file.tmp_kube_config.filename
 }
 
-resource "null_resource" "add-ghrc-secrets-kubectl" {
+resource "null_resource" "add-ghrc-secrets-kubectl2" {
   depends_on = [linode_lke_cluster.k8s_cluster]
 
   provisioner "local-exec" {
