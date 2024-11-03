@@ -1,0 +1,4 @@
+# Files and Directories to ignore
+
+.idea
+.terraform

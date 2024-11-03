@@ -1,0 +1,85 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: first-vela-app
+spec:
+  components:
+    - type: mongodb-cluster
+      namespace: prod
+      name: mongodb-cluster
+      properties:
+        clusterSize: 3
+        mongoDBAdminUser: admin
+        password: abc123456
+        storageClass: nfs-client
+        storageSize: 1Gi
+
+    - name: petclinic
+      type: webservice
+      properties:
+        image: ghcr.io/uplanit/marketplace:fd485366d4a3f9cf626e1c1eaadf8770b3dbf8b5
+        imagePullSecrets:
+          - ghrc
+        ports:
+          - port: 3000
+            expose: true
+        env:
+          - name: CLERK_SECRET_KEY
+            value:
+          - name: UPLOADTHING_SECRET
+            value:
+          - name: UPLOADTHING_APP_ID
+            value:
+          - name: TZ
+            value: UTC
+          - name: STRIPE_SECRET_KEY
+            value:
+          - name: DATABASE_URL
+            value:
+      traits:
+        - type: scaler
+          properties:
+            replicas: 3
+        - type: ingress-route
+          properties:
+            routes:
+              - kind: Rule
+                match: PathPrefix(`/`)
+                services:
+                  - name: petclinic
+                    port: 3000
+
+  policies:
+    - name: target-default
+      type: topology
+      properties:
+        # The cluster with name local is installed the KubeVela.
+        clusters: ["local"]
+        namespace: "default"
+    - name: target-prod
+      type: topology
+      properties:
+        clusters: ["local"]
+        # This namespace must be created before deploying.
+        namespace: "prod"
+    - name: deploy-ha
+      type: override
+      properties:
+        components:
+          - type: webservice
+            traits:
+              - type: scaler
+                properties:
+                  replicas: 2
+  workflow:
+    steps:
+      - name: deploy2default
+        type: deploy
+        properties:
+          policies: ["target-default"]
+      - name: manual-approval
+        type: suspend
+      - name: deploy2prod
+        type: deploy
+        properties:
+          policies: ["target-prod", "deploy-ha"]
