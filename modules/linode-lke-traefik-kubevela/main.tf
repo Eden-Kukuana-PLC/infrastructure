@@ -54,7 +54,7 @@ locals {
 
 resource "local_file" "tmp_kube_config" {
   content = base64decode(linode_lke_cluster.k8s_cluster.kubeconfig)
-  filename = "/tmp/kubeconfig-temp.yaml"
+  filename = "${path.cwd}/kubeconfig-temp.yaml"
 }
 
 provider "helm" {
