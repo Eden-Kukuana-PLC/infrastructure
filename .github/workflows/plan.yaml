@@ -8,13 +8,16 @@ on:
     branches:
       - main
 
-permissions:
-  pull-requests: write
+
 
 jobs:
   e2e-tests:
     name: Terraform Plan
     runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      issues: write
 
     strategy:
       matrix:
