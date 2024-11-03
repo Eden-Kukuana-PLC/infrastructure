@@ -72,7 +72,7 @@ resource "null_resource" "add-ghrc-secrets-kubectl" {
 
   provisioner "local-exec" {
     command = <<EOT
-        export KUBECONFIG=/tmp/kubeconfig-temp.yaml
+        export KUBECONFIG=${local_file.tmp_kube_config.filename}
         kubectl create secret docker-registry ghrc --docker-server=ghrc.io --docker-username=${var.ghrc_username} --docker-password=${var.ghrc_password} --docker-email=${var.ghrc_email}
       exit;
     EOT
