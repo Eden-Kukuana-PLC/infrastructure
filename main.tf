@@ -1,24 +1,25 @@
 # This just shows an example of how to use this modules
 
 
-terraform {
-  backend "s3" {
-    bucket = "infrastructure"
-    key    = "uplanit/terraform/terraform.tfstate"
-    region = "us-southeast-1"
-    skip_credentials_validation = true
-    access_key = ""
-    secret_key = ""
-    skip_region_validation = true
-    skip_metadata_api_check = true
-    skip_requesting_account_id = true
-    force_path_style = true
-    skip_s3_checksum = true
-    endpoints = {
-      s3 = ""
-    }
-  }
-}
+# required to store remote state
+# terraform {
+#   backend "s3" {
+#     bucket = "infrastructure"
+#     key    = "uplanit/terraform/terraform.tfstate"
+#     region = "us-southeast-1"
+#     skip_credentials_validation = true
+#     access_key = ""
+#     secret_key = ""
+#     skip_region_validation = true
+#     skip_metadata_api_check = true
+#     skip_requesting_account_id = true
+#     force_path_style = true
+#     skip_s3_checksum = true
+#     endpoints = {
+#       s3 = ""
+#     }
+#   }
+# }
 
 
 module "linode_lke_kubevela" {
