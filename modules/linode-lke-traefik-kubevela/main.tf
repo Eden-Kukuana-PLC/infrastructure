@@ -48,15 +48,13 @@ resource "linode_lke_cluster" "k8s_cluster" {
   }
 }
 
+locals {
+  kubeconfig_content = base64decode(linode_lke_cluster.k8s_cluster.kubeconfig)
+}
 
 resource "local_file" "tmp_kube_config" {
-  depends_on = [linode_lke_cluster.k8s_cluster]
-  provisioner "local-exec" {
-    command = <<EOT
-      echo "${base64decode(linode_lke_cluster.k8s_cluster.kubeconfig)}" > "/tmp/kubeconfig-temp.yaml"
-    EOT
-  }
-  filename = ""
+  content = base64decode(linode_lke_cluster.k8s_cluster.kubeconfig)
+  filename = "/tmp/kubeconfig-temp.yaml"
 }
 
 provider "helm" {
