@@ -48,28 +48,25 @@ resource "linode_lke_cluster" "k8s_cluster" {
   }
 }
 
-locals {
-  kubeconfig_content = base64decode(linode_lke_cluster.k8s_cluster.kubeconfig)
-  temp_file_path     = "/tmp/kubeconfig-temp.yaml"
-}
 
-resource "null_resource" "create_temp_kubeconfig" {
+resource "local_file" "tmp_kube_config" {
   depends_on = [linode_lke_cluster.k8s_cluster]
   provisioner "local-exec" {
     command = <<EOT
-      echo "${local.kubeconfig_content}" > ${local.temp_file_path}
+      echo "${base64decode(linode_lke_cluster.k8s_cluster.kubeconfig)}" > "/tmp/kubeconfig-temp.yaml"
     EOT
   }
+  filename = ""
 }
 
 provider "helm" {
   kubernetes {
-    config_path = local.temp_file_path
+    config_path = local_file.tmp_kube_config.filename
   }
 }
 
 provider "kubernetes" {
-  config_path = local.temp_file_path
+  config_path = local_file.tmp_kube_config.filename
 }
 
 resource "null_resource" "add-ghrc-secrets-kubectl" {
