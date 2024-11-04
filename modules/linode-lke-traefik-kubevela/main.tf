@@ -29,6 +29,17 @@ locals {
       count : 2
     }
   ]
+
+  kubeconfig_string = base64decode(linode_lke_cluster.k8s_cluster.kubeconfig)
+  kubeconfig = yamldecode(local.kubeconfig_string)
+
+  api_endpoint = linode_lke_cluster.k8s_cluster.api_endpoints[0]
+  api_token = local.kubeconfig.users[0].user.token
+  ca_certificate = base64decode(local.kubeconfig.clusters[0].cluster["certificate-authority-data"])
+
+  echo_labels = {
+    app = "echo-server"
+  }
 }
 
 //Use the linode_lke_cluster resource to create
@@ -54,30 +65,29 @@ data "linode_lke_cluster" "k8s_cluster_data" {
 }
 
 
-resource "local_file" "tmp_kube_config" {
-  depends_on = [linode_lke_cluster.k8s_cluster]
-  content  = base64decode(data.linode_lke_cluster.k8s_cluster_data.kubeconfig)
-  filename = "${path.cwd}/kubeconfig-temp.yaml"
-}
-
 provider "helm" {
   kubernetes {
-    config_path = local_file.tmp_kube_config.filename
+    host = local.api_endpoint
+    token = local.api_token
+
+    cluster_ca_certificate = local.ca_certificate
   }
 }
 
 provider "kubernetes" {
-  config_path = local_file.tmp_kube_config.filename
+  host = local.api_endpoint
+  token = local.api_token
+
+  cluster_ca_certificate = local.ca_certificate
 }
 
 resource "null_resource" "add-ghrc-secrets-kubectl" {
-  depends_on = [linode_lke_cluster.k8s_cluster, local_file.tmp_kube_config]
+  depends_on = [linode_lke_cluster.k8s_cluster]
   triggers = {
     cluster_id = linode_lke_cluster.k8s_cluster.id
   }
   provisioner "local-exec" {
     command = <<EOT
-        export KUBECONFIG=${local_file.tmp_kube_config.filename}
         kubectl create secret docker-registry ghrc --docker-server=ghrc.io --docker-username=${var.ghrc_username} --docker-password=${var.ghrc_password} --docker-email=${var.ghrc_email}
       exit;
     EOT
@@ -109,7 +119,7 @@ resource "null_resource" "add-ghrc-secrets-kubectl" {
 # }
 
 resource "helm_release" "traefik" {
-  depends_on = [linode_lke_cluster.k8s_cluster, local_file.tmp_kube_config]
+  depends_on = [linode_lke_cluster.k8s_cluster]
   name             = "traefik"
   repository       = "https://traefik.github.io/charts"
   chart            = "traefik"
@@ -198,7 +208,7 @@ resource "helm_release" "traefik" {
 
 
 resource "helm_release" "kubevela" {
-  depends_on = [helm_release.traefik, local_file.tmp_kube_config]
+  depends_on = [helm_release.traefik]
   name             = "vela-core"
   repository       = "https://kubevela.github.io/charts"
   chart            = "vela-core"
@@ -216,7 +226,6 @@ resource "null_resource" "add_kubevela_experimental_addon_registry" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      export KUBECONFIG=${local_file.tmp_kube_config.filename}
       vela addon registry add experimental --type=helm --endpoint=https://addons.kubevela.net/experimental/ --insecureSkipTLS;
       exit;
     EOT
@@ -230,7 +239,6 @@ resource "null_resource" "enable_mongodb_operator" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      export KUBECONFIG=${local_file.tmp_kube_config.filename}
       vela addon ls;
       vela addon enable mongodb-operator;
       exit;
@@ -245,7 +253,6 @@ resource "null_resource" "initialise_kubevela_environments" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      export KUBECONFIG=${local_file.tmp_kube_config.filename}
       vela env init production --namespace production
       vela env init playground --namespace playground
       exit 0;
@@ -260,7 +267,6 @@ resource "null_resource" "apply_ingress_route_trait" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      export KUBECONFIG=${local_file.tmp_kube_config.filename}
       vela def apply ${path.module}/kubevela/traits/ingress-route.cue
       exit;
     EOT
