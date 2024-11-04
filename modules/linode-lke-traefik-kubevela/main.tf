@@ -36,10 +36,6 @@ locals {
   api_endpoint = linode_lke_cluster.k8s_cluster.api_endpoints[0]
   api_token = local.kubeconfig.users[0].user.token
   ca_certificate = base64decode(local.kubeconfig.clusters[0].cluster["certificate-authority-data"])
-
-  echo_labels = {
-    app = "echo-server"
-  }
 }
 
 //Use the linode_lke_cluster resource to create
@@ -88,6 +84,8 @@ resource "null_resource" "add-ghrc-secrets-kubectl" {
   }
   provisioner "local-exec" {
     command = <<EOT
+        echo "${local.kubeconfig_string}" > /tmp/kubeconfig-temp.yaml
+        export KUBECONFIG=/tmp/kubeconfig-temp.yaml
         kubectl create secret docker-registry ghrc --docker-server=ghrc.io --docker-username=${var.ghrc_username} --docker-password=${var.ghrc_password} --docker-email=${var.ghrc_email}
       exit;
     EOT
@@ -226,6 +224,8 @@ resource "null_resource" "add_kubevela_experimental_addon_registry" {
   }
   provisioner "local-exec" {
     command = <<EOT
+      echo "${local.kubeconfig_string}" > /tmp/kubeconfig-temp.yaml
+      export KUBECONFIG=/tmp/kubeconfig-temp.yaml
       vela addon registry add experimental --type=helm --endpoint=https://addons.kubevela.net/experimental/ --insecureSkipTLS;
       exit;
     EOT
@@ -239,6 +239,8 @@ resource "null_resource" "enable_mongodb_operator" {
   }
   provisioner "local-exec" {
     command = <<EOT
+      echo "${local.kubeconfig_string}" > /tmp/kubeconfig-temp.yaml
+      export KUBECONFIG=/tmp/kubeconfig-temp.yaml
       vela addon ls;
       vela addon enable mongodb-operator;
       exit;
@@ -253,6 +255,8 @@ resource "null_resource" "initialise_kubevela_environments" {
   }
   provisioner "local-exec" {
     command = <<EOT
+      echo "${local.kubeconfig_string}" > /tmp/kubeconfig-temp.yaml
+      export KUBECONFIG=/tmp/kubeconfig-temp.yaml
       vela env init production --namespace production
       vela env init playground --namespace playground
       exit 0;
@@ -267,6 +271,8 @@ resource "null_resource" "apply_ingress_route_trait" {
   }
   provisioner "local-exec" {
     command = <<EOT
+      echo "${local.kubeconfig_string}" > /tmp/kubeconfig-temp.yaml
+      export KUBECONFIG=/tmp/kubeconfig-temp.yaml
       vela def apply ${path.module}/kubevela/traits/ingress-route.cue
       exit;
     EOT
