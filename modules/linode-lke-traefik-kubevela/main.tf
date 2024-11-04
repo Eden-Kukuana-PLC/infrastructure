@@ -205,6 +205,7 @@ resource "null_resource" "add_kubevela_experimental_addon_registry" {
 
   provisioner "local-exec" {
     command = <<EOT
+      export KUBECONFIG=${local_file.tmp_kube_config.filename}
       vela addon registry add experimental --type=helm --endpoint=https://addons.kubevela.net/experimental/ --insecureSkipTLS;
       exit;
     EOT
@@ -216,6 +217,7 @@ resource "null_resource" "enable_mongodb_operator" {
 
   provisioner "local-exec" {
     command = <<EOT
+      export KUBECONFIG=${local_file.tmp_kube_config.filename}
       vela addon ls;
       vela addon enable mongodb-operator;
       exit;
@@ -228,6 +230,7 @@ resource "null_resource" "initialise_kubevela_environments" {
 
   provisioner "local-exec" {
     command = <<EOT
+      export KUBECONFIG=${local_file.tmp_kube_config.filename}
       vela env init production --namespace production
       vela env init playground --namespace playground
       exit 0;
@@ -240,6 +243,7 @@ resource "null_resource" "apply_ingress_route_trait" {
 
   provisioner "local-exec" {
     command = <<EOT
+      export KUBECONFIG=${local_file.tmp_kube_config.filename}
       vela def apply ${path.root}/kubevela/traits/ingress-route.cue
       exit;
     EOT
