@@ -244,7 +244,8 @@ resource "null_resource" "apply_ingress_route_trait" {
   provisioner "local-exec" {
     command = <<EOT
       export KUBECONFIG=${local_file.tmp_kube_config.filename}
-      vela def apply ${path.root}/kubevela/traits/ingress-route.cue
+      ls
+      vela def apply ${path.module}/kubevela/traits/ingress-route.cue
       exit;
     EOT
   }
