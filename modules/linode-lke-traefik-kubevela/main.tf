@@ -255,8 +255,6 @@ resource "null_resource" "initialise_kubevela_environments" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      echo "${local.kubeconfig_string}" > /tmp/kubeconfig-temp.yaml
-      export KUBECONFIG=/tmp/kubeconfig-temp.yaml
       vela env init production --namespace production
       vela env init playground --namespace playground
       exit 0;
@@ -271,8 +269,6 @@ resource "null_resource" "apply_ingress_route_trait" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      echo "${local.kubeconfig_string}" > /tmp/kubeconfig-temp.yaml
-      export KUBECONFIG=/tmp/kubeconfig-temp.yaml
       vela def apply ${path.module}/kubevela/traits/ingress-route.cue
       exit;
     EOT
