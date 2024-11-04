@@ -22,14 +22,7 @@ provider "linode" {
   token = var.linode_token
 }
 
-locals {
-  pools = [
-    {
-      type : "g6-standard-1"
-      count : 2
-    }
-  ]
-}
+
 
 //Use the linode_lke_cluster resource to create
 //a Kubernetes cluster
@@ -40,7 +33,7 @@ resource "linode_lke_cluster" "k8s_cluster" {
   tags        = var.tags
 
   dynamic "pool" {
-    for_each = local.pools
+    for_each = var.pools
     content {
       type  = pool.value["type"]
       count = pool.value["count"]
@@ -69,7 +62,9 @@ provider "kubernetes" {
 
 resource "null_resource" "add-ghrc-secrets-kubectl2" {
   depends_on = [linode_lke_cluster.k8s_cluster]
-
+  triggers = {
+    cluster_id = linode_lke_cluster.k8s_cluster.id
+  }
   provisioner "local-exec" {
     command = <<EOT
         export KUBECONFIG=${local_file.tmp_kube_config.filename}
@@ -206,7 +201,9 @@ resource "helm_release" "kubevela" {
 
 resource "null_resource" "add_kubevela_experimental_addon_registry" {
   depends_on = [helm_release.kubevela]
-
+  triggers = {
+    cluster_id = linode_lke_cluster.k8s_cluster.id
+  }
   provisioner "local-exec" {
     command = <<EOT
       export KUBECONFIG=${local_file.tmp_kube_config.filename}
@@ -218,7 +215,9 @@ resource "null_resource" "add_kubevela_experimental_addon_registry" {
 
 resource "null_resource" "enable_mongodb_operator" {
   depends_on = [helm_release.traefik, helm_release.kubevela, null_resource.add_kubevela_experimental_addon_registry]
-
+  triggers = {
+    cluster_id = linode_lke_cluster.k8s_cluster.id
+  }
   provisioner "local-exec" {
     command = <<EOT
       export KUBECONFIG=${local_file.tmp_kube_config.filename}
@@ -231,7 +230,9 @@ resource "null_resource" "enable_mongodb_operator" {
 
 resource "null_resource" "initialise_kubevela_environments" {
   depends_on = [null_resource.add_kubevela_experimental_addon_registry]
-
+  triggers = {
+    cluster_id = linode_lke_cluster.k8s_cluster.id
+  }
   provisioner "local-exec" {
     command = <<EOT
       export KUBECONFIG=${local_file.tmp_kube_config.filename}
@@ -244,7 +245,9 @@ resource "null_resource" "initialise_kubevela_environments" {
 
 resource "null_resource" "apply_ingress_route_trait" {
   depends_on = [null_resource.initialise_kubevela_environments]
-
+  triggers = {
+    cluster_id = linode_lke_cluster.k8s_cluster.id
+  }
   provisioner "local-exec" {
     command = <<EOT
       export KUBECONFIG=${local_file.tmp_kube_config.filename}
