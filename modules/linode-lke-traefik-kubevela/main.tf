@@ -45,15 +45,10 @@ data "linode_lke_cluster" "k8s_cluster_data" {
   id = linode_lke_cluster.k8s_cluster.id
 }
 
-locals {
-  kubeconfig = coalesce(
-    data.linode_lke_cluster.k8s_cluster_data.kubeconfig,
-    linode_lke_cluster.k8s_cluster.kubeconfig
-  )
-}
 
 resource "local_file" "tmp_kube_config" {
-  content  = base64decode(local.kubeconfig)
+  depends_on = [linode_lke_cluster.k8s_cluster]
+  content  = base64decode(data.linode_lke_cluster.k8s_cluster_data.kubeconfig)
   filename = "${path.cwd}/kubeconfig-temp.yaml"
 }
 
@@ -68,7 +63,7 @@ provider "kubernetes" {
 }
 
 resource "null_resource" "add-ghrc-secrets-kubectl2" {
-  depends_on = [linode_lke_cluster.k8s_cluster]
+  depends_on = [linode_lke_cluster.k8s_cluster, local_file.tmp_kube_config]
   triggers = {
     cluster_id = linode_lke_cluster.k8s_cluster.id
   }
@@ -106,7 +101,7 @@ resource "null_resource" "add-ghrc-secrets-kubectl2" {
 # }
 
 resource "helm_release" "traefik" {
-  depends_on = [linode_lke_cluster.k8s_cluster]
+  depends_on = [linode_lke_cluster.k8s_cluster, local_file.tmp_kube_config]
   name             = "traefik"
   repository       = "https://traefik.github.io/charts"
   chart            = "traefik"
