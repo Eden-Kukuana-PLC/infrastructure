@@ -48,15 +48,12 @@ resource "linode_lke_cluster" "k8s_cluster" {
   }
 }
 
-
-# import to self for reruns
-import {
+data "linode_lke_cluster" "k8s_cluster_data" {
   id = linode_lke_cluster.k8s_cluster.id
-  to = linode_lke_cluster.k8s_cluster
 }
 
 resource "local_file" "tmp_kube_config" {
-  content = base64decode(linode_lke_cluster.k8s_cluster.kubeconfig)
+  content  = base64decode(data.linode_lke_cluster.k8s_cluster_data.kubeconfig)
   filename = "${path.cwd}/kubeconfig-temp.yaml"
 }
 
