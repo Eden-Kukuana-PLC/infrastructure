@@ -42,6 +42,7 @@ resource "linode_lke_cluster" "k8s_cluster" {
 }
 
 data "linode_lke_cluster" "k8s_cluster_data" {
+  depends_on = [linode_lke_cluster.k8s_cluster]
   id = linode_lke_cluster.k8s_cluster.id
 }
 
@@ -62,7 +63,7 @@ provider "kubernetes" {
   config_path = local_file.tmp_kube_config.filename
 }
 
-resource "null_resource" "add-ghrc-secrets-kubectl2" {
+resource "null_resource" "add-ghrc-secrets-kubectl" {
   depends_on = [linode_lke_cluster.k8s_cluster, local_file.tmp_kube_config]
   triggers = {
     cluster_id = linode_lke_cluster.k8s_cluster.id
@@ -190,7 +191,7 @@ resource "helm_release" "traefik" {
 
 
 resource "helm_release" "kubevela" {
-  depends_on = [helm_release.traefik]
+  depends_on = [helm_release.traefik, local_file.tmp_kube_config]
   name             = "vela-core"
   repository       = "https://kubevela.github.io/charts"
   chart            = "vela-core"
@@ -253,7 +254,6 @@ resource "null_resource" "apply_ingress_route_trait" {
   provisioner "local-exec" {
     command = <<EOT
       export KUBECONFIG=${local_file.tmp_kube_config.filename}
-      ls
       vela def apply ${path.module}/kubevela/traits/ingress-route.cue
       exit;
     EOT
