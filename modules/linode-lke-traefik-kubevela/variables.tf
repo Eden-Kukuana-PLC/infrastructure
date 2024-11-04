@@ -33,10 +33,6 @@ variable "pools" {
     {
       type  = "g6-standard-1"
       count = 1
-    },
-    {
-      type  = "g6-standard-1"
-      count = 1
     }
   ]
 }
