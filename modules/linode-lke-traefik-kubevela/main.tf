@@ -22,7 +22,14 @@ provider "linode" {
   token = var.linode_token
 }
 
-
+locals {
+  pools = [
+    {
+      type : "g6-standard-1"
+      count : 2
+    }
+  ]
+}
 
 //Use the linode_lke_cluster resource to create
 //a Kubernetes cluster
@@ -33,7 +40,7 @@ resource "linode_lke_cluster" "k8s_cluster" {
   tags        = var.tags
 
   dynamic "pool" {
-    for_each = var.pools
+    for_each = local.pools
     content {
       type  = pool.value["type"]
       count = pool.value["count"]
