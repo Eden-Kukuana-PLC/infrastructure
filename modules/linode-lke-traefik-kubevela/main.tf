@@ -78,7 +78,7 @@ provider "kubernetes" {
 }
 
 resource "kubernetes_secret" "github-container-registry" {
-  depends_on = [null_resource.apply_ingress_route_trait]
+  depends_on = [linode_lke_cluster.k8s_cluster]
   metadata {
     name = "ghcr-container-registry"
   }
