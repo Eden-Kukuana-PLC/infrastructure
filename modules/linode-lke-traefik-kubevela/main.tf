@@ -163,7 +163,7 @@ resource "helm_release" "traefik" {
         enabled: true
         # -- Deployment or DaemonSet
         # -- Number of pods of the deployment (only applies when kind == Deployment)
-        replicas: 2
+        replicas: 1
         initContainers = [
           {
             name  = "volume-permissions"
