@@ -131,8 +131,8 @@ resource "helm_release" "traefik" {
         }
       }
 
-      ingressRoute = {
-        dashboard = {
+      logs = {
+        access = {
           enabled = true
         }
       }
@@ -165,6 +165,10 @@ resource "helm_release" "traefik" {
       }
 
       deployment = {
+        enabled: true
+        # -- Deployment or DaemonSet
+        # -- Number of pods of the deployment (only applies when kind == Deployment)
+        replicas: 2
         initContainers = [
           {
             name  = "volume-permissions"
