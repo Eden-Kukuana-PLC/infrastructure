@@ -23,12 +23,7 @@ provider "linode" {
 }
 
 locals {
-  pools = [
-    {
-      type : "g6-standard-1"
-      count : 2
-    }
-  ]
+  pools = var.pools
 
   kubeconfig_string = base64decode(linode_lke_cluster.k8s_cluster.kubeconfig)
   kubeconfig = yamldecode(local.kubeconfig_string)
