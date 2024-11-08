@@ -7,7 +7,7 @@ terraform {
 
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "2.0.3"  # check the latest version for compatibility
+      version = "2.33.0"  # check the latest version for compatibility
     }
 
     helm = {
@@ -77,44 +77,28 @@ provider "kubernetes" {
   cluster_ca_certificate = local.ca_certificate
 }
 
-resource "null_resource" "add-ghrc-secrets-kubectl" {
-  depends_on = [linode_lke_cluster.k8s_cluster]
-  triggers = {
-    cluster_id = linode_lke_cluster.k8s_cluster.id
+resource "kubernetes_secret" "github-container-registry" {
+  depends_on = [null_resource.apply_ingress_route_trait]
+  metadata {
+    name = "ghcr-container-registry"
   }
-  provisioner "local-exec" {
-    command = <<EOT
-        echo "${local.kubeconfig_string}" > /tmp/kubeconfig-temp.yaml
-        export KUBECONFIG=/tmp/kubeconfig-temp.yaml
-        kubectl create secret docker-registry ghrc --docker-server=ghrc.io --docker-username=${var.ghrc_username} --docker-password=${var.ghrc_password} --docker-email=${var.ghrc_email}
-      exit;
-    EOT
+
+  type = "kubernetes.io/dockerconfigjson"
+
+  data = {
+    ".dockerconfigjson" = jsonencode({
+      auths = {
+        "ghcr.io" = {
+          "username" = var.ghrc_username
+          "password" = var.ghrc_password
+          "email"    = var.ghrc_email
+          "auth"     = base64encode("${var.ghrc_username}:${var.ghrc_password}")
+        }
+      }
+    })
   }
 }
 
-# This fails on the pipeline
-# So we use the null resource above
-# resource "kubernetes_secret" "github-container-registry" {
-#   depends_on = [null_resource.apply_ingress_route_trait]
-#   metadata {
-#     name = "docker-cfg"
-#   }
-#
-#   type = "kubernetes.io/dockerconfigjson"
-#
-#   data = {
-#     ".dockerconfigjson" = jsonencode({
-#       auths = {
-#         "ghcr.io" = {
-#           "username" = var.ghrc_username
-#           "password" = var.ghrc_password
-#           "email"    = var.ghrc_email
-#           "auth"     = base64encode("${var.ghrc_username}:${var.ghrc_password}")
-#         }
-#       }
-#     })
-#   }
-# }
 
 resource "helm_release" "traefik" {
   depends_on = [linode_lke_cluster.k8s_cluster]
@@ -220,7 +204,7 @@ resource "helm_release" "kubevela" {
 resource "null_resource" "add_kubevela_experimental_addon_registry" {
   depends_on = [helm_release.kubevela]
   triggers = {
-    cluster_id = linode_lke_cluster.k8s_cluster.id
+    cluster_id = helm_release.kubevela.id
   }
   provisioner "local-exec" {
     command = <<EOT
@@ -232,18 +216,16 @@ resource "null_resource" "add_kubevela_experimental_addon_registry" {
   }
 }
 
-resource "null_resource" "enable_mongodb_operator" {
-  depends_on = [helm_release.traefik, helm_release.kubevela, null_resource.add_kubevela_experimental_addon_registry]
+resource "null_resource" "enable_fluxcd" {
   triggers = {
-    cluster_id = linode_lke_cluster.k8s_cluster.id
+    kubevela = helm_release.kubevela.id
   }
   provisioner "local-exec" {
     command = <<EOT
       echo "${local.kubeconfig_string}" > /tmp/kubeconfig-temp.yaml
       export KUBECONFIG=/tmp/kubeconfig-temp.yaml
-      vela addon ls;
-      vela addon enable mongodb-operator;
-      exit;
+      vela addon enable fluxcd
+      exit 0;
     EOT
   }
 }
@@ -251,7 +233,7 @@ resource "null_resource" "enable_mongodb_operator" {
 resource "null_resource" "initialise_kubevela_environments" {
   depends_on = [null_resource.add_kubevela_experimental_addon_registry]
   triggers = {
-    cluster_id = linode_lke_cluster.k8s_cluster.id
+    cluster_id = helm_release.kubevela.id
   }
   provisioner "local-exec" {
     command = <<EOT
@@ -267,7 +249,7 @@ resource "null_resource" "initialise_kubevela_environments" {
 resource "null_resource" "apply_ingress_route_trait" {
   depends_on = [null_resource.initialise_kubevela_environments]
   triggers = {
-    cluster_id = linode_lke_cluster.k8s_cluster.id
+    cluster_id = helm_release.kubevela.id
   }
   provisioner "local-exec" {
     command = <<EOT
